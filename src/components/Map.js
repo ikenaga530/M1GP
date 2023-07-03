@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   CircleF,
   GoogleMap,
@@ -6,8 +6,35 @@ import {
   Marker,
   MarkerF,
 } from "@react-google-maps/api";
+import fireStoreDB from "../lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
 
 const Map = () => {
+  /* firebase */
+  //useState　初期設定
+  const [todos, setTodos] = useState([]);
+
+  //データ取得用配列
+  const arrList = [];
+
+  //useEffectの処理-ここから
+  useEffect(() => {
+    const fireStorePostData = collection(fireStoreDB, "sight");
+    getDocs(fireStorePostData).then((snapShot) => {
+      snapShot.forEach((docs) => {
+        const doc = docs.data();
+        arrList.push({
+          id: docs.id,
+          place: doc.place,
+          lat: doc.lat,
+          lon: doc.lon,
+          congestion: doc.crowd,
+        });
+      });
+      setTodos(arrList);
+    });
+  }, []);
+
   const containerStyle = {
     width: "100%",
     height: "100vh",
@@ -50,12 +77,23 @@ const Map = () => {
     draggable: false,
     editable: false,
     visible: true,
-    radius: 30000,
     zIndex: 1,
   };
-
+  console.log(todos);
   return (
     <>
+      <div>
+        <ul>
+          {todos.map((todo) => (
+            <li key={todo.id}>
+              <div>場所：{todo.place}</div>
+              <div>緯度：{todo.lat}</div>
+              <div>経度：{todo.lon}</div>
+              <div>混雑度:{todo.congestion}</div>
+            </li>
+          ))}
+        </ul>
+      </div>
       <div className="container px-36 py-5 mx-auto">
         <div className="text-center text-xl mb-3">
           <h1>混雑度可視化マップ</h1>
