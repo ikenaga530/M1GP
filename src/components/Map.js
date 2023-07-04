@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import {
   CircleF,
   GoogleMap,
+  InfoWindow,
+  InfoWindowF,
   LoadScript,
   Marker,
   MarkerF,
@@ -17,7 +19,7 @@ const Map = () => {
   //データ取得用配列
   const arrList = [];
 
-  //useEffectの処理-ここから
+  //useEffectの処理
   useEffect(() => {
     const fireStorePostData = collection(fireStoreDB, "sight");
     getDocs(fireStorePostData).then((snapShot) => {
@@ -28,12 +30,46 @@ const Map = () => {
           place: doc.place,
           lat: doc.lat,
           lon: doc.lon,
-          congestion: doc.crowd,
+          crowd: doc.crowd,
         });
       });
       setTodos(arrList);
     });
   }, []);
+
+  /*データ更新(最悪ケース)*/
+  // const fetchData = async () => {
+  //   const fireStorePostData = collection(fireStoreDB, "sight");
+  //   const snapShot = await getDocs(fireStorePostData);
+  //   const arrList = [];
+  //   snapShot.forEach((docs) => {
+  //     const doc = docs.data();
+  //     arrList.push({
+  //       id: docs.id,
+  //       place: doc.place,
+  //       lat: doc.lat,
+  //       lon: doc.lon,
+  //       crowd: doc.crowd,
+  //     });
+  //   });
+  //   setTodos(arrList);
+  // };
+
+  // // useEffectの処理-ここから
+  // useEffect(() => {
+  //   // 初回のデータ取得
+  //   fetchData();
+
+  //   // 定期的なポーリングを行うためのタイマー
+  //   const timer = setInterval(() => {
+  //     fetchData();
+  //   }, 5000); // 5秒ごとにデータを更新
+
+  //   return () => {
+  //     // コンポーネントがアンマウントされたときにタイマーをクリア
+  //     clearInterval(timer);
+  //   };
+  // }, []);
 
   const containerStyle = {
     width: "100%",
@@ -46,7 +82,6 @@ const Map = () => {
   };
 
   const mapOptions = {
-    disableDefaultUI: true, // デフォルトのUI要素を非表示にする
     styles: [
       // カスタムスタイルを指定する
       {
@@ -57,14 +92,13 @@ const Map = () => {
     ],
   };
 
-  const positionTodaiji = {
-    lat: 34.688945692404246,
-    lng: 135.83986903087077,
-  };
-
-  const positionNarakoen = {
-    lat: 34.68291679088236,
-    lng: 135.83231218845356,
+  const labelStyle = {
+    backgroundColor: "white",
+    color: "black",
+    fontWeight: "bold",
+    fontSize: "18px",
+    padding: "6px",
+    borderRadius: "100%",
   };
 
   const circleOptions = {
@@ -79,21 +113,21 @@ const Map = () => {
     visible: true,
     zIndex: 1,
   };
-  console.log(todos);
+
   return (
     <>
-      <div>
+      {/* <div>
         <ul>
           {todos.map((todo) => (
             <li key={todo.id}>
               <div>場所：{todo.place}</div>
               <div>緯度：{todo.lat}</div>
               <div>経度：{todo.lon}</div>
-              <div>混雑度:{todo.congestion}</div>
+              <div>混雑度:{todo.crowd}</div>
             </li>
           ))}
         </ul>
-      </div>
+      </div> */}
       <div className="container px-36 py-5 mx-auto">
         <div className="text-center text-xl mb-3">
           <h1>混雑度可視化マップ</h1>
@@ -106,18 +140,29 @@ const Map = () => {
               zoom={15}
               options={mapOptions} // オプションを指定する
             >
-              <MarkerF position={positionTodaiji} />
-              <MarkerF position={positionNarakoen} />
-              <CircleF
-                center={positionTodaiji}
-                radius={50}
-                options={circleOptions}
-              />
-              <CircleF
-                center={positionNarakoen}
-                radius={100}
-                options={circleOptions}
-              />
+              {/* <Marker position={center} visible={false} /> */}
+              {todos.map((todo) => (
+                <MarkerF
+                  position={{ lat: todo.lat, lng: todo.lon }}
+                  label={{
+                    text: todo.place,
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    ...labelStyle,
+                  }}
+                >
+                  <InfoWindowF position={{ lat: todo.lat, lng: todo.lon }}>
+                    <div>
+                      <h4>混雑度:{todo.crowd}</h4>
+                    </div>
+                  </InfoWindowF>
+                  <CircleF
+                    center={{ lat: todo.lat, lng: todo.lon }}
+                    options={circleOptions}
+                    radius={50}
+                  />
+                </MarkerF>
+              ))}
             </GoogleMap>
           </LoadScript>
         </div>
