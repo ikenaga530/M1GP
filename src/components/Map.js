@@ -10,16 +10,58 @@ import { collection, onSnapshot } from "firebase/firestore";
 import fireStoreDB from "../lib/firebase";
 
 const Map = () => {
+  //初期センターポジション
   const initialCenter = {
     lat: 34.68592640282977,
     lng: 135.83985002600292,
   };
+
+  // マップ大きさ
+  const containerStyle = {
+    width: "95%",
+    height: "95vh",
+    sm: "full",
+  };
+
+  //マップ設定
+  const mapOptions = {
+    styles: [
+      // カスタムスタイルを指定する
+      {
+        featureType: "poi",
+        elementType: "labels",
+        stylers: [{ visibility: "off" }], // POI（地名や施設）のラベルを非表示にする
+      },
+    ],
+    mapTypeControl: false, // 地図の種類コントロールを無効化する
+  };
+  //サークル設定(混雑度可視化用)
+  const circleOptions = {
+    strokeColor: "#de7c6b",
+    strokeOpacity: 0.8,
+    strokeWeight: 2,
+    fillColor: "#de7c6b",
+    fillOpacity: 0.35,
+    clickable: false,
+    draggable: false,
+    editable: false,
+    visible: true,
+    zIndex: 1,
+  };
+
+  //state
   const [todos, setTodos] = useState([]);
   const [selectedMarker, setSelectedMarker] = useState(null);
   const [selectedPlace, setSelectedPlace] = useState("");
   const [selectedOption, setSelectedOption] = useState(null);
   const [center, setCenter] = useState(initialCenter);
 
+  const markerOptions = todos.map((todo) => ({
+    label: todo.place,
+    value: todo.id,
+  }));
+
+  //DB読み込み
   useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(fireStoreDB, "sight"),
@@ -44,6 +86,7 @@ const Map = () => {
     };
   }, []);
 
+  //マップ上のプルダウンメニュー
   useEffect(() => {
     if (selectedOption) {
       const selectedTodo = todos.find((todo) => todo.id === selectedOption);
@@ -55,42 +98,6 @@ const Map = () => {
       }
     }
   }, [selectedOption, todos]);
-
-  // マップの設定
-  const containerStyle = {
-    width: "100%",
-    height: "100vh",
-  };
-
-  const mapOptions = {
-    styles: [
-      // カスタムスタイルを指定する
-      {
-        featureType: "poi",
-        elementType: "labels",
-        stylers: [{ visibility: "off" }], // POI（地名や施設）のラベルを非表示にする
-      },
-    ],
-    mapTypeControl: false, // 地図の種類コントロールを無効化する
-  };
-
-  const circleOptions = {
-    strokeColor: "#de7c6b",
-    strokeOpacity: 0.8,
-    strokeWeight: 2,
-    fillColor: "#de7c6b",
-    fillOpacity: 0.35,
-    clickable: false,
-    draggable: false,
-    editable: false,
-    visible: true,
-    zIndex: 1,
-  };
-
-  const markerOptions = todos.map((todo) => ({
-    label: todo.place,
-    value: todo.id,
-  }));
 
   const handleMarkerClick = (marker) => {
     setSelectedMarker(marker);
@@ -116,14 +123,14 @@ const Map = () => {
 
   return (
     <>
-      <div className="container px-36 py-5 mx-auto font-sans">
+      <div className="container px-36 py-5 mx-auto pb-0 font-sans">
         <div className="text-center mb-3">
-          <h1 className="text-5xl text-blue-500">YSmt Map</h1>
+          <h1 className="text-5xl font-bold text-blue-500">YSmt Map</h1>
           <p className="text-2xl">
             YSmt Map is a map that visualizes congestion.
           </p>
         </div>
-        <div className="-mb-4">
+        <div className="flex justify-center items-center h-screen">
           <LoadScript googleMapsApiKey={process.env.REACT_APP_MAP}>
             <GoogleMap
               mapContainerStyle={containerStyle}
