@@ -3,7 +3,6 @@ import {
   GoogleMap,
   LoadScript,
   Marker,
-  Circle,
   InfoWindow,
 } from "@react-google-maps/api";
 import { collection, onSnapshot } from "firebase/firestore";
@@ -14,56 +13,38 @@ import markerMatsuda from "../images/Matsuda.png";
 import markerMatsui from "../images/Matsui.png";
 
 const Ysmt = () => {
-  //初期センターポジション
   const initialCenter = {
     lat: 34.68592640282977,
     lng: 135.83985002600292,
   };
 
-  // マップ大きさ
   const containerStyle = {
     width: "95%",
     height: "95vh",
     sm: "full",
   };
 
-  //マップ設定
   const mapOptions = {
     styles: [
-      // カスタムスタイルを指定する
       {
         featureType: "poi",
         elementType: "labels",
-        stylers: [{ visibility: "off" }], // POI（地名や施設）のラベルを非表示にする
+        stylers: [{ visibility: "off" }],
       },
     ],
-    mapTypeControl: false, // 地図の種類コントロールを無効化する
-  };
-  //サークル設定(混雑度可視化用)
-  const circleOptions = {
-    strokeColor: "#de7c6b",
-    strokeOpacity: 0.8,
-    strokeWeight: 2,
-    fillColor: "#de7c6b",
-    fillOpacity: 0.35,
-    clickable: false,
-    draggable: false,
-    editable: false,
-    visible: true,
-    zIndex: 1,
+    mapTypeControl: false,
   };
 
-  //state
   const [todos, setTodos] = useState([]);
   const [selectedOption, setSelectedOption] = useState(null);
   const [center, setCenter] = useState(initialCenter);
+  const [infoWindowOpen, setInfoWindowOpen] = useState(true); // 吹き出しの初期表示をオンにする
 
   const markerOptions = todos.map((todo) => ({
     label: todo.place,
     value: todo.id,
   }));
 
-  //DB読み込み
   useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(fireStoreDB, "sight"),
@@ -85,11 +66,10 @@ const Ysmt = () => {
     );
 
     return () => {
-      unsubscribe(); // リスナーを解除する
+      unsubscribe();
     };
   }, []);
 
-  //マップ上のプルダウンメニュー
   useEffect(() => {
     if (selectedOption) {
       const selectedTodo = todos.find((todo) => todo.id === selectedOption);
@@ -105,12 +85,11 @@ const Ysmt = () => {
   const handleOptionChange = (event) => {
     const selectedId = event.target.value;
     const selectedTodo = todos.find((todo) => todo.id === selectedId);
-    console.log(selectedTodo);
     setSelectedOption(selectedId);
     if (selectedTodo) {
       setCenter({
         lat: selectedTodo.lat,
-        lng: selectedTodo.lng,
+        lng: selectedTodo.lon,
       });
     }
   };
@@ -170,16 +149,24 @@ const Ysmt = () => {
                 </div>
               </div>
               {todos.map((todo) => (
-                <>
-                  <Marker
-                    key={todo.id}
-                    icon={{
-                      url: getMarkerImage(todo.ysmt), // インポートした画像を指定する
-                      scaledSize: new window.google.maps.Size(60, 60),
-                    }}
-                    position={{ lat: todo.lat, lng: todo.lon }}
-                  />
-                </>
+                <Marker
+                  key={todo.id}
+                  icon={{
+                    url: getMarkerImage(todo.ysmt),
+                    scaledSize: new window.google.maps.Size(60, 60),
+                  }}
+                  position={{ lat: todo.lat, lng: todo.lon }}
+                  label={{
+                    text: todo.place,
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    backgroundColor: "white",
+                    color: "black",
+                    padding: "6px",
+                    borderRadius: "100%",
+                    anchor: new window.google.maps.Point(12, 36),
+                  }}
+                />
               ))}
             </GoogleMap>
           </LoadScript>
