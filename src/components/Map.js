@@ -1,41 +1,32 @@
 import React, { useEffect, useState } from "react";
-import {
-  GoogleMap,
-  LoadScript,
-  Marker,
-  Circle,
-  InfoWindow,
-} from "@react-google-maps/api";
+import { GoogleMap, LoadScript, Marker, Circle } from "@react-google-maps/api";
 import { collection, onSnapshot } from "firebase/firestore";
 import fireStoreDB from "../lib/firebase";
+import { chat } from "./Chat";
 
 const Map = () => {
-  //初期センターポジション
   const initialCenter = {
     lat: 34.68592640282977,
     lng: 135.83985002600292,
   };
 
-  // マップ大きさ
   const containerStyle = {
     width: "95%",
     height: "95vh",
     sm: "full",
   };
 
-  //マップ設定
   const mapOptions = {
     styles: [
-      // カスタムスタイルを指定する
       {
         featureType: "poi",
         elementType: "labels",
-        stylers: [{ visibility: "off" }], // POI（地名や施設）のラベルを非表示にする
+        stylers: [{ visibility: "off" }],
       },
     ],
-    mapTypeControl: false, // 地図の種類コントロールを無効化する
+    mapTypeControl: false,
   };
-  //サークル設定(混雑度可視化用)
+
   const circleOptions = {
     strokeColor: "#de7c6b",
     strokeOpacity: 0.8,
@@ -49,19 +40,19 @@ const Map = () => {
     zIndex: 1,
   };
 
-  //state
   const [todos, setTodos] = useState([]);
   const [selectedMarker, setSelectedMarker] = useState(null);
-  const [selectedPlace, setSelectedPlace] = useState("");
   const [selectedOption, setSelectedOption] = useState(null);
   const [center, setCenter] = useState(initialCenter);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatOutput, setChatOutput] = useState("");
 
   const markerOptions = todos.map((todo) => ({
     label: todo.place,
     value: todo.id,
   }));
 
-  //DB読み込み
   useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(fireStoreDB, "sight"),
@@ -82,11 +73,10 @@ const Map = () => {
     );
 
     return () => {
-      unsubscribe(); // リスナーを解除する
+      unsubscribe();
     };
   }, []);
 
-  //マップ上のプルダウンメニュー
   useEffect(() => {
     if (selectedOption) {
       const selectedTodo = todos.find((todo) => todo.id === selectedOption);
@@ -101,24 +91,41 @@ const Map = () => {
 
   const handleMarkerClick = (marker) => {
     setSelectedMarker(marker);
+    setModalOpen(true);
   };
 
-  const handleAskButtonClick = () => {
-    // ChatGPTに選択された場所を渡すなどの処理を実装する
-    console.log("選択された場所:", selectedMarker.place);
+  const handleAskButtonClick = async () => {
+    console.log(chatInput, selectedMarker.place);
+    const message_body = chatInput;
+    const responseText = await chat(selectedMarker.place, message_body);
+
+    setChatOutput(responseText); // ChatGPTへの質問に関する処理を実装することで、実際の応答を取得できます
   };
 
   const handleOptionChange = (event) => {
     const selectedId = event.target.value;
     const selectedTodo = todos.find((todo) => todo.id === selectedId);
-    console.log(selectedTodo);
     setSelectedOption(selectedId);
     if (selectedTodo) {
       setCenter({
         lat: selectedTodo.lat,
-        lng: selectedTodo.lng,
+        lng: selectedTodo.lon,
       });
     }
+  };
+
+  const handleModalClose = () => {
+    setModalOpen(false);
+    setChatInput("");
+    setChatOutput("");
+  };
+
+  const handleChatInputChange = (event) => {
+    setChatInput(event.target.value);
+  };
+
+  const handleModalClick = (event) => {
+    event.stopPropagation();
   };
 
   return (
@@ -153,10 +160,10 @@ const Map = () => {
                 </select>
               </div>
               {todos.map((todo) => (
-                <>
+                <React.Fragment key={todo.id}>
                   <Marker
-                    key={todo.id}
                     position={{ lat: todo.lat, lng: todo.lon }}
+                    onClick={() => handleMarkerClick(todo)}
                     label={{
                       text: todo.place,
                       fontSize: "14px",
@@ -165,35 +172,54 @@ const Map = () => {
                       color: "black",
                       padding: "6px",
                       borderRadius: "100%",
+                      anchor: new window.google.maps.Point(12, 36),
                     }}
-                    onClick={() => handleMarkerClick(todo)}
                   />
                   <Circle
-                    key={todo.id}
                     center={{ lat: todo.lat, lng: todo.lon }}
                     options={circleOptions}
                     radius={todo.crowd * 1.5}
                   />
-                </>
+                </React.Fragment>
               ))}
-              {selectedMarker && (
-                <InfoWindow
-                  position={{
-                    lat: selectedMarker.lat,
-                    lng: selectedMarker.lon,
-                  }}
-                  onCloseClick={() => setSelectedMarker(null)}
+              {selectedMarker && modalOpen && (
+                <div
+                  className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50"
+                  onClick={handleModalClose}
                 >
-                  <div>
-                    <h1 className="underline font-bold text-xl">
+                  <div
+                    className="bg-white p-8 rounded shadow text-center w-1/2"
+                    onClick={handleModalClick}
+                  >
+                    <h1 className="text-2xl font-bold mb-4">
                       {selectedMarker.place}
                     </h1>
-                    <p className="text-lg">混雑度: {selectedMarker.crowd}</p>
-                    <button onClick={handleAskButtonClick}>
-                      ChatGPTに聞く
-                    </button>
+                    <h1 className="text-1xl font-bold mb-4">
+                      混雑度: {selectedMarker.crowd}
+                    </h1>
+                    {chatOutput ? (
+                      <p className="mb-4">{chatOutput}</p>
+                    ) : (
+                      <>
+                        <textarea
+                          className="w-full h-24 p-2 border border-gray-300 rounded mb-4"
+                          placeholder="質問を入力してください"
+                          value={chatInput}
+                          onChange={handleChatInputChange}
+                        ></textarea>
+                        <button
+                          className="bg-blue-500 text-white px-4 py-2 rounded"
+                          onClick={handleAskButtonClick}
+                        >
+                          ChatGPTに聞く
+                        </button>{" "}
+                        <p className="mt-2 mb-0 mb-4">
+                          ※時間かかります(たまにバグります)
+                        </p>
+                      </>
+                    )}
                   </div>
-                </InfoWindow>
+                </div>
               )}
             </GoogleMap>
           </LoadScript>
