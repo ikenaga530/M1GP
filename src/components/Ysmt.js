@@ -11,6 +11,7 @@ import markerYasumoto from "../images/Yasumoto.png";
 import markerSuwa from "../images/Suwa.png";
 import markerMatsuda from "../images/Matsuda.png";
 import markerMatsui from "../images/Matsui.png";
+import ubi from "../images/icon.png";
 
 const Ysmt = () => {
   const initialCenter = {
